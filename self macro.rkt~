@@ -1,0 +1,4 @@
+#lang racket
+; macro on self recursively define
+
+; purpose: solving those method that need to call its own methods.
