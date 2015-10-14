@@ -18,7 +18,7 @@
     ; The body is simply the function itself
     self))
 
-
+;it is called hygienic macro
 (define-syntax class
   (syntax-rules ()
     [(class class-name (attr ...)
@@ -50,3 +50,76 @@ binding for self when we use it in our class definition, causing the error.
   [(g) ((self "f") 3)])
 
 |#
+
+
+;In cases that we actually want to refer to local names from outside of a macro,
+;Racket provides syntax parameters to do so.
+
+(define-syntax stxparam1
+  (syntax-rules ()
+    [(stxparam body)
+      (syntax-parameterize
+       ([self (syntax-rules ()
+                [(self arg) (sqr arg)])])
+       body)]))
+
+
+(define-syntax stxparam2
+  (syntax-rules ()
+    [(stxparam body)
+     (let ([f 1])
+      (syntax-parameterize
+       ([self (syntax-rules ()
+                [(self arg) (+ arg f)])])
+       body))]))
+
+(define-syntax class
+  (syntax-rules ()
+    [(class class-name (attr ...)
+       [(method-name arg ...) body] ...)
+     (define (class-name attr ...)
+       (letrec 
+           ([myself
+             (syntax-parameterize
+              ([self (syntax-rules ()
+                       ; Replace self with myself
+                       [(self m) (myself m)])])
+              (lambda (msg)
+                (cond [(equal? msg (symbol->string (quote attr))) attr]
+                      ...
+                      [(equal? msg (symbol->string (quote method-name)))
+                       (lambda (arg ...) body)]
+                      ...
+                      [else "Unrecognized message!"])))])
+         myself))]))
+
+#|
+(class A (x)
+  [(f y) (+ x y)]
+  [(g) ((self "f") 3)])
+|#
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
